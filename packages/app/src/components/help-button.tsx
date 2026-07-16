@@ -31,7 +31,7 @@ const triggerClass =
 const showPopover = () => true
 
 export function HelpButton() {
-  if (import.meta.env.VITE_OPENCODE_CHANNEL !== "dev") return null
+  if (import.meta.env.VITE_ICSCODE_CHANNEL !== "dev") return null
 
   const platform = usePlatform()
 
@@ -54,7 +54,7 @@ export function HelpButton() {
 
 // can remove this after the tabs rollout has been out for a while
 export function TabsInfoPopup() {
-  if (import.meta.env.VITE_OPENCODE_CHANNEL !== "dev") return null
+  if (import.meta.env.VITE_ICSCODE_CHANNEL !== "dev") return null
 
   const [state, setState] = persisted(Persist.global("tabsInfoPopup"), createStore({ dismissed: false }))
   // setState({ dismissed: false }) // for testing

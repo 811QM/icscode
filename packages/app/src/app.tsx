@@ -229,7 +229,7 @@ function UiI18nBridge(props: ParentProps) {
 
 declare global {
   interface Window {
-    __OPENCODE__?: {
+    __ICSCODE__?: {
       deepLinks?: string[]
     }
     api?: {
