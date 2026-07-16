@@ -7,7 +7,7 @@ import { Process } from "@/util/process"
 
 const MANAGED_PLIST_DOMAIN = "ai.icscode.managed"
 
-// Keys injected by macOS/MDM into the managed plist that are not OpenCode config
+// Keys injected by macOS/MDM into the managed plist that are not icscode config
 const PLIST_META = new Set([
   "PayloadDisplayName",
   "PayloadIdentifier",
