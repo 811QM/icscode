@@ -4,8 +4,8 @@ import { useTheme } from "../context/theme"
 import { MouseButton, Renderable, RGBA } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useToast } from "./toast"
-import { Flag } from "@icscode-ai/core/flag/flag"
-import { useBindings, useicscodeModeStack } from "../keymap"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { useBindings, useOpencodeModeStack } from "../keymap"
 import { useClipboard } from "../context/clipboard"
 
 export function Dialog(
@@ -76,7 +76,7 @@ function init() {
   })
 
   const renderer = useRenderer()
-  const modeStack = useicscodeModeStack()
+  const modeStack = useOpencodeModeStack()
 
   createEffect(() => {
     if (store.stack.length === 0) return

@@ -21,15 +21,15 @@ export const LEADER_TOKEN = "leader"
 export const ICSCODE_BASE_MODE = "base"
 export const COMMAND_PALETTE_COMMAND = "command.palette.show"
 
-const ICSCODE_MODE_KEY = "icscode.mode"
+const ICSCODE_MODE_KEY = "opencode.mode"
 
-export const icscodeKeymapProvider = KeymapProvider
-export const useicscodeKeymap = useKeymap
+export const OpencodeKeymapProvider = KeymapProvider
+export const useOpencodeKeymap = useKeymap
 
 export { useBindings, useKeymapSelector }
 
 export type OpenTuiKeymap = ReturnType<typeof useKeymap>
-type icscodeModeStack = ReturnType<typeof createicscodeModeStack>
+type OpencodeModeStack = ReturnType<typeof createOpencodeModeStack>
 type CommandSlashEntry = {
   display: string
   description?: string
@@ -44,13 +44,13 @@ type BindingLookup = {
 type FormatConfig = { keybinds: BindingLookup }
 type ResolvedKeymapConfig = FormatConfig & { leader_timeout: number }
 
-const modeStacks = new WeakMap<OpenTuiKeymap, icscodeModeStack>()
+const modeStacks = new WeakMap<OpenTuiKeymap, OpencodeModeStack>()
 
 function isVisiblePaletteCommand(command: Command) {
   return command.hidden !== true && command.name !== COMMAND_PALETTE_COMMAND
 }
 
-export function createicscodeModeStack(keymap: OpenTuiKeymap) {
+export function createOpencodeModeStack(keymap: OpenTuiKeymap) {
   keymap.setData(ICSCODE_MODE_KEY, ICSCODE_BASE_MODE)
 
   const offFields = keymap.registerLayerFields({
@@ -99,13 +99,13 @@ export function createicscodeModeStack(keymap: OpenTuiKeymap) {
   return stackApi
 }
 
-export function useicscodeModeStack() {
-  return geticscodeModeStack(useicscodeKeymap())
+export function useOpencodeModeStack() {
+  return getOpencodeModeStack(useOpencodeKeymap())
 }
 
-export function geticscodeModeStack(keymap: OpenTuiKeymap) {
+export function getOpencodeModeStack(keymap: OpenTuiKeymap) {
   const value = modeStacks.get(keymap)
-  if (!value) throw new Error("icscode mode stack is not registered for this keymap")
+  if (!value) throw new Error("Opencode mode stack is not registered for this keymap")
   return value
 }
 
@@ -211,8 +211,8 @@ export function formatKeyBindings(bindings: Parameters<typeof formatCommandBindi
   return formatCommandBindingsExtra(bindings, formatOptions(config))
 }
 
-export function registericscodeKeymap(keymap: OpenTuiKeymap, renderer: CliRenderer, config: ResolvedKeymapConfig) {
-  const modeStack = createicscodeModeStack(keymap)
+export function registerOpencodeKeymap(keymap: OpenTuiKeymap, renderer: CliRenderer, config: ResolvedKeymapConfig) {
+  const modeStack = createOpencodeModeStack(keymap)
   const offCommaBindings = registerCommaBindings(keymap)
   const offAliasExpander = registerKeyAliases(keymap)
   const offBaseLayout = registerBaseLayoutFallback(keymap)
@@ -258,7 +258,7 @@ export function useCommandShortcut(command: string): Accessor<string> {
 }
 
 export function useCommandSlashes(): Accessor<readonly CommandSlashEntry[]> {
-  const keymap = useicscodeKeymap()
+  const keymap = useOpencodeKeymap()
   const entries = useKeymapSelector((keymap: OpenTuiKeymap) =>
     keymap.getCommandEntries({
       visibility: "reachable",

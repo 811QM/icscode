@@ -1,10 +1,10 @@
 import { render, TimeToFirstDraw, useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { registericscodeSpinner } from "./component/register-spinner"
+import { registerOpencodeSpinner } from "./component/register-spinner"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { Deferred, Effect } from "effect"
-import { Global } from "@icscode-ai/core/global"
-import { Flag } from "@icscode-ai/core/flag/flag"
-import { InstallationVersion } from "@icscode-ai/core/installation/version"
+import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
@@ -73,10 +73,10 @@ import { CommandPaletteDialog } from "./component/command-palette"
 import {
   COMMAND_PALETTE_COMMAND,
   ICSCODE_BASE_MODE,
-  icscodeKeymapProvider,
-  registericscodeKeymap,
+  OpencodeKeymapProvider,
+  registerOpencodeKeymap,
   useBindings,
-  useicscodeKeymap,
+  useOpencodeKeymap,
 } from "./keymap"
 
 import type { EventSource } from "./context/sdk"
@@ -87,7 +87,7 @@ import { win32DisableProcessedInput, win32FlushInputBuffer } from "./terminal-wi
 import { destroyRenderer } from "./util/renderer"
 import { cliErrorMessage, errorFormat } from "./util/error"
 
-registericscodeSpinner()
+registerOpencodeSpinner()
 
 const appGlobalBindingCommands = [
   "session.list",
@@ -118,8 +118,8 @@ const appBindingCommands = [
   "variant.list",
   "provider.connect",
   "console.org.switch",
-  "icscode.status",
-  "icscode.debug",
+  "opencode.status",
+  "opencode.debug",
   "theme.switch",
   "theme.switch_mode",
   "theme.mode.lock",
@@ -214,7 +214,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
       win32DisableProcessedInput()
       const keymap = createDefaultOpenTuiKeymap(renderer)
       yield* Effect.acquireRelease(
-        Effect.sync(() => registericscodeKeymap(keymap, renderer, input.config)),
+        Effect.sync(() => registerOpencodeKeymap(keymap, renderer, input.config)),
         (unregister) => Effect.sync(unregister),
       )
       yield* Effect.addFinalizer(() =>
@@ -279,7 +279,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                         }}
                       >
                         <ClipboardProvider>
-                          <icscodeKeymapProvider keymap={keymap}>
+                          <OpencodeKeymapProvider keymap={keymap}>
                             <ArgsProvider {...input.args}>
                               <KVProvider>
                                 <ToastProvider>
@@ -339,7 +339,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                 </ToastProvider>
                               </KVProvider>
                             </ArgsProvider>
-                          </icscodeKeymapProvider>
+                          </OpencodeKeymapProvider>
                         </ClipboardProvider>
                       </TuiStartupProvider>
                     </TuiTerminalEnvironmentProvider>
@@ -371,7 +371,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   const dialog = useDialog()
   const local = useLocal()
   const kv = useKV()
-  const keymap = useicscodeKeymap()
+  const keymap = useOpencodeKeymap()
   const event = useEvent()
   const sdk = useSDK()
   const toast = useToast()
@@ -761,7 +761,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           ]
         : []),
       {
-        name: "icscode.status",
+        name: "opencode.status",
         title: "View status",
         slashName: "status",
         run: () => {
@@ -770,7 +770,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         category: "System",
       },
       {
-        name: "icscode.debug",
+        name: "opencode.debug",
         title: "View debug info",
         slashName: "debug",
         run: () => {
@@ -819,7 +819,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         name: "docs.open",
         title: "Open docs",
         run: () => {
-          open("https://icscode.ai/docs").catch(() => {})
+          open("https://opencode.ai/docs").catch(() => {})
           dialog.clear()
         },
         category: "System",
