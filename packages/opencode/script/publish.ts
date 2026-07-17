@@ -11,6 +11,10 @@ async function published(name: string, version: string) {
   return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0
 }
 
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function publish(dir: string, name: string, version: string) {
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
@@ -21,6 +25,8 @@ async function publish(dir: string, name: string, version: string) {
   }
   await $`bun pm pack`.cwd(dir)
   await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
+  // npm rate-limits rapid publishes; wait before the next one.
+  await sleep(30000)
 }
 
 const binaries: Record<string, string> = {}
@@ -28,8 +34,14 @@ for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" }
   const pkg = await Bun.file(`./dist/${filepath}`).json()
   binaries[pkg.name] = pkg.version
 }
+// For the first dev publishes, only publish Windows binaries to avoid npm rate limits.
+// Re-enable macOS and Linux once Windows publishing is stable.
+const windowsBinaries = Object.fromEntries(
+  Object.entries(binaries).filter(([name]) => name.startsWith("icscode-windows")),
+)
 console.log("binaries", binaries)
-const version = Object.values(binaries)[0]
+console.log("publishing binaries", windowsBinaries)
+const version = Object.values(windowsBinaries)[0] ?? Object.values(binaries)[0]
 
 await $`mkdir -p ./dist/${pkg.name}`
 await $`mkdir -p ./dist/${pkg.name}/bin`
@@ -65,17 +77,17 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
       license: pkg.license,
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],
-      optionalDependencies: binaries,
+      optionalDependencies: windowsBinaries,
     },
     null,
     2,
   ),
 )
 
-const tasks = Object.entries(binaries).map(async ([name]) => {
-  await publish(`./dist/${name}`, name, binaries[name])
-})
-await Promise.all(tasks)
+// Publish binary packages sequentially to avoid npm rate limits.
+for (const [name] of Object.entries(windowsBinaries)) {
+  await publish(`./dist/${name}`, name, windowsBinaries[name])
+}
 await publish(`./dist/${pkg.name}`, pkg.name, version)
 
 const image = "ghcr.io/811qm/icscode"
@@ -124,24 +136,25 @@ if (!Script.preview) {
     "",
   ].join("\n")
 
-  for (const [pkg, pkgbuild] of [["icscode-bin", binaryPkgbuild]]) {
-    for (let i = 0; i < 30; i++) {
-      try {
-        await $`rm -rf ./dist/aur-${pkg}`
-        await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
-        await $`cd ./dist/aur-${pkg} && git checkout master`
-        await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild)
-        await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
-        await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
-        if ((await $`cd ./dist/aur-${pkg} && git diff --cached --quiet`.nothrow()).exitCode === 0) break
-        await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${Script.version}"`
-        await $`cd ./dist/aur-${pkg} && git push`
-        break
-      } catch {
-        continue
-      }
-    }
-  }
+  // AUR publishing is disabled for now. Re-enable when AUR_KEY is configured.
+  // for (const [pkg, pkgbuild] of [["icscode-bin", binaryPkgbuild]]) {
+  //   for (let i = 0; i < 30; i++) {
+  //     try {
+  //       await $`rm -rf ./dist/aur-${pkg}`
+  //       await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
+  //       await $`cd ./dist/aur-${pkg} && git checkout master`
+  //       await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild)
+  //       await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
+  //       await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
+  //       if ((await $`cd ./dist/aur-${pkg} && git diff --cached --quiet`.nothrow()).exitCode === 0) break
+  //       await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${Script.version}"`
+  //       await $`cd ./dist/aur-${pkg} && git push`
+  //       break
+  //     } catch {
+  //       continue
+  //     }
+  //   }
+  // }
 
   // Homebrew formula
   const homebrewFormula = [

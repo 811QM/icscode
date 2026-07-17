@@ -145,7 +145,25 @@ jobs:
           opencode-app-id: ${{ vars.OPENCODE_APP_ID }}
           opencode-app-secret: ${{ secrets.OPENCODE_APP_SECRET }}
 
+      - name: Check Azure signing secrets
+        id: check
+        shell: pwsh
+        run: |
+          $clientId = "${{ secrets.AZURE_CLIENT_ID }}"
+          $tenantId = "${{ secrets.AZURE_TENANT_ID }}"
+          $subscriptionId = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          $account = "${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}"
+          $profile = "${{ secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE }}"
+          $endpoint = "${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}"
+          if ($clientId -and $tenantId -and $subscriptionId -and $account -and $profile -and $endpoint) {
+            "has-secrets=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "has-secrets=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Azure signing secrets not configured; skipping Windows code signing."
+          }
+
       - name: Azure login
+        if: steps.check.outputs.has-secrets == 'true'
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
@@ -153,6 +171,7 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - uses: azure/artifact-signing-action@b443cf8ea4124818d2ea9f043cba29fc3ec47b16 # v1.2.0
+        if: steps.check.outputs.has-secrets == 'true'
         with:
           endpoint: ${{ env.AZURE_TRUSTED_SIGNING_ENDPOINT }}
           signing-account-name: ${{ env.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
@@ -173,6 +192,7 @@ jobs:
           exclude-interactive-browser-credential: true
 
       - name: Verify Windows CLI signatures
+        if: steps.check.outputs.has-secrets == 'true'
         shell: pwsh
         run: |
           $files = @(
@@ -221,8 +241,8 @@ jobs:
     needs:
       - build-cli
       - version
-    if: github.repository == '811QM/icscode'
-    continue-on-error: false
+    if: false # Desktop builds disabled for now; re-enable when Apple/Azure signing secrets are configured.
+    continue-on-error: true
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -316,7 +336,7 @@ jobs:
         env:
           OPENCODE_VERSION: ${{ needs.version.outputs.version }}
           OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
-          OPENCODE_CLI_ARTIFACT: ${{ (runner.os == 'Windows' && 'opencode-cli-windows') || 'opencode-cli' }}
+          OPENCODE_CLI_ARTIFACT: ${{ (runner.os == 'Windows' && 'icscode-cli-windows') || 'icscode-cli' }}
           RUST_TARGET: ${{ matrix.settings.target }}
           GH_TOKEN: ${{ github.token }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -410,7 +430,6 @@ jobs:
       - version
       - build-cli
       - sign-cli-windows
-      - build-electron
     if: always() && !failure() && !cancelled()
     runs-on: ubuntu-latest
     steps:
@@ -456,19 +475,6 @@ jobs:
           name: icscode-preview-cli
           path: packages/cli/dist
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.version.outputs.release
-        with:
-          pattern: latest-yml-*
-          path: /tmp/latest-yml
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.version.outputs.release
-        with:
-          pattern: opencode-desktop-*
-          path: /tmp/desktop
-          merge-multiple: true
-
       - name: Setup git committer
         id: committer
         uses: ./.github/actions/setup-git-committer
@@ -476,46 +482,32 @@ jobs:
           opencode-app-id: ${{ vars.OPENCODE_APP_ID }}
           opencode-app-secret: ${{ secrets.OPENCODE_APP_SECRET }}
 
-      - name: Cache apt packages (AUR)
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-aur-
+      # AUR publishing is disabled for now. Re-enable when AUR_KEY is configured.
+      # - name: Cache apt packages (AUR)
+      #   uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      #   with:
+      #     path: /var/cache/apt/archives
+      #     key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-apt-aur-
 
-      - name: Setup SSH for AUR
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pacman-package-manager
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          git config --global user.email "icscode@sst.dev"
-          git config --global user.name "icscode"
-          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
-
-      - name: Upload desktop release assets
-        if: needs.version.outputs.release
-        env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
-        run: |
-          shopt -s nullglob
-          files=(/tmp/desktop/*.{exe,blockmap,dmg,zip,AppImage,deb,rpm} /tmp/desktop/*.app.tar.gz)
-          if (( ${#files[@]} == 0 )); then
-            echo "No desktop release assets found"
-            exit 1
-          fi
-          gh release upload "v${{ needs.version.outputs.version }}" "${files[@]}" --clobber --repo "${{ needs.version.outputs.repo }}"
+      # - name: Setup SSH for AUR
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y pacman-package-manager
+      #     mkdir -p ~/.ssh
+      #     echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
+      #     chmod 600 ~/.ssh/id_rsa
+      #     git config --global user.email "icscode@sst.dev"
+      #     git config --global user.name "icscode"
+      #     ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
       - run: ./script/publish.ts
         env:
           OPENCODE_VERSION: ${{ needs.version.outputs.version }}
           OPENCODE_RELEASE: ${{ needs.version.outputs.release }}
-          AUR_KEY: ${{ secrets.AUR_KEY }}
+          # AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ needs.version.outputs.repo }}
           NPM_CONFIG_PROVENANCE: false
-          LATEST_YML_DIR: /tmp/latest-yml
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
