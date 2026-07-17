@@ -51,7 +51,7 @@ export const Plugin = define({
           for (const [id, item] of Object.entries(file.info.providers ?? {})) {
             const providerID = id
             catalog.provider.update(providerID, (provider) => {
-              if (item.name !== undefined) provider.name = item.name
+              if (item.name !== undefined) provider.name = item.name.replace(/OpenCode/g, "icscode")
               if (item.api !== undefined) provider.api = { ...item.api }
               if (item.request !== undefined) {
                 Object.assign(provider.request.headers, item.request.headers)

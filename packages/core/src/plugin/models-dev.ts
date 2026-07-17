@@ -145,7 +145,7 @@ export const ModelsDevPlugin = define({
         for (const item of Object.values(data)) {
           const providerID = ProviderV2.ID.make(item.id)
           catalog.provider.update(providerID, (provider) => {
-            provider.name = item.name
+            provider.name = item.name.replace(/OpenCode/g, "icscode")
             provider.api = item.npm
               ? {
                   type: "aisdk",

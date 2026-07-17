@@ -111,7 +111,7 @@ export const OpencodePlugin = define<HttpClient.HttpClient | EventV2.Service | S
       for (const [providerID, item] of Object.entries(providers ?? {})) {
         catalog.provider.update(providerID, (provider) => {
           provider.integrationID = Integration.ID.make("opencode")
-          if (item.name !== undefined) provider.name = item.name
+          if (item.name !== undefined) provider.name = item.name.replace(/OpenCode/g, "icscode")
           provider.api = item.npm
             ? { type: "aisdk", package: item.npm, url: item.api }
             : { type: "native", url: item.api, settings: {} }
