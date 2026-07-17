@@ -1,16 +1,16 @@
 name: "Setup Git Committer"
-description: "Create app token and configure git user"
+description: "Create app token and configure git user. Falls back to GITHUB_TOKEN if app credentials are not available."
 inputs:
   opencode-app-id:
     description: "OpenCode GitHub App ID"
-    required: true
+    required: false
   opencode-app-secret:
     description: "OpenCode GitHub App private key"
-    required: true
+    required: false
 outputs:
   token:
-    description: "GitHub App token"
-    value: ${{ steps.apptoken.outputs.token }}
+    description: "GitHub token"
+    value: ${{ steps.resolve.outputs.token }}
   app-slug:
     description: "GitHub App slug"
     value: ${{ steps.apptoken.outputs.app-slug }}
@@ -19,25 +19,41 @@ runs:
   steps:
     - name: Create app token
       id: apptoken
+      if: ${{ inputs.opencode-app-id != '' && inputs.opencode-app-secret != '' }}
       uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
         app-id: ${{ inputs.opencode-app-id }}
         private-key: ${{ inputs.opencode-app-secret }}
         owner: ${{ github.repository_owner }}
 
-    - name: Configure git user
-      run: |
-        slug="${{ steps.apptoken.outputs.app-slug }}"
-        git config --global user.name "${slug}[bot]"
-        git config --global user.email "${slug}[bot]@users.noreply.github.com"
+    - name: Resolve token
+      id: resolve
       shell: bash
+      run: |
+        if [ -n "${{ steps.apptoken.outputs.token }}" ]; then
+          echo "token=${{ steps.apptoken.outputs.token }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "token=${{ github.token }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Configure git user
+      shell: bash
+      run: |
+        if [ -n "${{ steps.apptoken.outputs.app-slug }}" ]; then
+          slug="${{ steps.apptoken.outputs.app-slug }}"
+          git config --global user.name "${slug}[bot]"
+          git config --global user.email "${slug}[bot]@users.noreply.github.com"
+        else
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        fi
 
     - name: Clear checkout auth
+      shell: bash
       run: |
         git config --local --unset-all http.https://github.com/.extraheader || true
-      shell: bash
 
     - name: Configure git remote
-      run: |
-        git remote set-url origin https://x-access-token:${{ steps.apptoken.outputs.token }}@github.com/${{ github.repository }}
       shell: bash
+      run: |
+        git remote set-url origin https://x-access-token:${{ steps.resolve.outputs.token }}@github.com/${{ github.repository }}
