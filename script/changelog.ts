@@ -48,7 +48,7 @@ Examples:
 await rm(file, { force: true })
 
 const quiet = values.quiet
-const cmd = ["opencode", "run"]
+const cmd = ["icscode", "run"]
 cmd.push("--variant", values.variant)
 cmd.push("--command", "changelog", "--", ...args)
 
@@ -65,6 +65,19 @@ const [out, err] = quiet
 const code = await proc.exited
 if (code === 0) {
   if (values.print) process.stdout.write(await Bun.file(file).text())
+  process.exit(0)
+}
+
+// If icscode is not installed (e.g., first publish), fall back to a generic changelog.
+const executable = await Bun.spawn({
+  cmd: ["which", "icscode"],
+  stdout: "ignore",
+  stderr: "ignore",
+}).exited
+
+if (executable !== 0) {
+  await Bun.write(file, "Initial release of icscode.")
+  if (values.print) process.stdout.write("Initial release of icscode.\n")
   process.exit(0)
 }
 

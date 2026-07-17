@@ -51,7 +51,7 @@ jobs:
 
       - name: Install Icscode
         if: inputs.bump || inputs.version
-        run: bun i -g icscode
+        run: bun i -g icscode || true
 
       - id: version
         run: |
