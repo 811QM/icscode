@@ -3,7 +3,6 @@ import { useSync } from "../../context/sync"
 import { createMemo, Show } from "solid-js"
 import { useTheme } from "../../context/theme"
 import { useTuiConfig } from "../../config"
-import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { usePluginRuntime } from "../../plugin/runtime"
 
 import { getScrollAcceleration } from "../../util/scroll"
@@ -87,15 +86,12 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
         </scrollbox>
 
         <box flexShrink={0} gap={1} paddingTop={1}>
-          <pluginRuntime.Slot name="sidebar_footer" mode="single_winner" session_id={props.sessionID}>
-            <text fg={theme.textMuted}>
-              <span style={{ fg: theme.success }}>•</span> <b>Open</b>
-              <span style={{ fg: theme.text }}>
-                <b>Code</b>
-              </span>{" "}
-              <span>{InstallationVersion}</span>
-            </text>
-          </pluginRuntime.Slot>
+            <pluginRuntime.Slot name="sidebar_footer" mode="single_winner" session_id={props.sessionID}>
+              <text fg={theme.textMuted}>
+                <span style={{ fg: theme.success }}>•</span>{" "}
+                <span>1.0.0</span>
+              </text>
+            </pluginRuntime.Slot>
         </box>
       </box>
     </Show>
