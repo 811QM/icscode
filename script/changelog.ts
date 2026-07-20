@@ -52,12 +52,21 @@ const cmd = ["icscode", "run"]
 cmd.push("--variant", values.variant)
 cmd.push("--command", "changelog", "--", ...args)
 
-const proc = Bun.spawn(cmd, {
-  cwd: root,
-  stdin: "inherit",
-  stdout: quiet ? "pipe" : "inherit",
-  stderr: quiet ? "pipe" : "inherit",
-})
+let proc
+try {
+  proc = Bun.spawn(cmd, {
+    cwd: root,
+    stdin: "inherit",
+    stdout: quiet ? "pipe" : "inherit",
+    stderr: quiet ? "pipe" : "inherit",
+  })
+} catch {
+  // If icscode is not installed or not executable (e.g., first publish),
+  // fall back to a generic changelog.
+  await Bun.write(file, "Initial release of icscode.")
+  if (values.print) process.stdout.write("Initial release of icscode.\n")
+  process.exit(0)
+}
 
 const [out, err] = quiet
   ? await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
