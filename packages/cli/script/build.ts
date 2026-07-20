@@ -87,7 +87,7 @@ for (const item of targets) {
       windows: {},
     },
     define: {
-      OPENCODE_VERSION: `'${Script.version}'`,
+      ICSCODE_VERSION: `'${Script.version}'`,
       OPENCODE_CLI_NAME: `'${binary}'`,
       OPENCODE_MODELS_DEV: modelsData,
       OPENCODE_CHANNEL: `'${Script.channel}'`,

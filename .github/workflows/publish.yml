@@ -58,8 +58,8 @@ jobs:
           ./script/version.ts
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
-          OPENCODE_BUMP: ${{ inputs.bump }}
-          OPENCODE_VERSION: ${{ inputs.version }}
+          ICSCODE_BUMP: ${{ inputs.bump }}
+          ICSCODE_VERSION: ${{ inputs.version }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GH_REPO: ${{ (github.ref_name == 'beta' && '811QM/icscode-beta') || github.repository }}
     outputs:
@@ -92,8 +92,8 @@ jobs:
           ./packages/opencode/script/build.ts ${{ (github.ref_name == 'beta' && '--sourcemaps') || '' }}
           ./packages/cli/script/build.ts ${{ (github.ref_name == 'beta' && '--sourcemaps') || '' }}
         env:
-          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
-          OPENCODE_RELEASE: ${{ needs.version.outputs.release }}
+          ICSCODE_VERSION: ${{ needs.version.outputs.version }}
+          ICSCODE_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ needs.version.outputs.repo }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
 
@@ -334,9 +334,9 @@ jobs:
         run: bun ./scripts/prepare.ts
         working-directory: packages/desktop
         env:
-          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
-          OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
-          OPENCODE_CLI_ARTIFACT: ${{ (runner.os == 'Windows' && 'icscode-cli-windows') || 'icscode-cli' }}
+          ICSCODE_VERSION: ${{ needs.version.outputs.version }}
+          ICSCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
+          ICSCODE_CLI_ARTIFACT: ${{ (runner.os == 'Windows' && 'icscode-cli-windows') || 'icscode-cli' }}
           RUST_TARGET: ${{ matrix.settings.target }}
           GH_TOKEN: ${{ github.token }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -346,7 +346,7 @@ jobs:
         working-directory: packages/desktop
         env:
           NODE_OPTIONS: --max-old-space-size=4096
-          OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
+          ICSCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.WEB_SENTRY_PROJECT }}
@@ -361,7 +361,7 @@ jobs:
         working-directory: packages/desktop
         timeout-minutes: 60
         env:
-          OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
+          ICSCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -375,7 +375,7 @@ jobs:
         working-directory: packages/desktop
         timeout-minutes: 60
         env:
-          OPENCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
+          ICSCODE_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
 
       - name: Create macOS .app.tar.gz
         if: runner.os == 'macOS' && needs.version.outputs.release
@@ -504,8 +504,8 @@ jobs:
 
       - run: ./script/publish.ts
         env:
-          OPENCODE_VERSION: ${{ needs.version.outputs.version }}
-          OPENCODE_RELEASE: ${{ needs.version.outputs.release }}
+          ICSCODE_VERSION: ${{ needs.version.outputs.version }}
+          ICSCODE_RELEASE: ${{ needs.version.outputs.release }}
           # AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ needs.version.outputs.repo }}
