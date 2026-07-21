@@ -4,7 +4,7 @@ set -euo pipefail
 cd ~/mashaohu/icscode
 
 echo "==> Pulling latest dev branch"
-git pull --autostash origin dev
+git pull --rebase --autostash origin dev
 
 echo "==> Cleaning dist and cache"
 rm -rf packages/opencode/dist node_modules/.cache
