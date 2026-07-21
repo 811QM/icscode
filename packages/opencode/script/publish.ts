@@ -8,7 +8,7 @@ const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
 async function published(name: string, version: string) {
-  return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0
+  return (await $`npm view ${name}@${version} version`.nothrow().quiet()).exitCode === 0
 }
 
 async function sleep(ms: number) {
