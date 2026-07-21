@@ -156,6 +156,8 @@ if (!Script.preview) {
   //   }
   // }
 
+  // Homebrew publishing is disabled for now. Re-enable when homebrew-tap repo is created.
+  /*
   // Homebrew formula
   const homebrewFormula = [
     "# typed: false",
@@ -223,4 +225,5 @@ if (!Script.preview) {
     await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
     await $`cd ./dist/homebrew-tap && git push`
   }
+  */
 }
