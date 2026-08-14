@@ -38,23 +38,16 @@ const LIBRARIES = [
 ]
 
 async function loadKnowledgeBaseUrl() {
-  const candidates = [
-    path.join(os.homedir(), ".config", "icscode", "icscode.jsonc"),
-    path.join(os.homedir(), ".config", "icscode", "icscode.json"),
-  ]
-  for (const configPath of candidates) {
-    try {
-      const file = Bun.file(configPath)
-      const exists = await file.exists()
-      if (!exists) continue
-      const config = await file.json()
-      const url = config?.ohos_pc?.knowledge_base_url
-      if (url) return url
-    } catch {
-      continue
-    }
+  const configPath = path.join(os.homedir(), ".config", "icscode", "icscode.json")
+  try {
+    const file = Bun.file(configPath)
+    const exists = await file.exists()
+    if (!exists) return DEFAULT_KNOWLEDGE_BASE_URL
+    const config = await file.json()
+    return config?.ohos_pc?.knowledge_base_url ?? DEFAULT_KNOWLEDGE_BASE_URL
+  } catch {
+    return DEFAULT_KNOWLEDGE_BASE_URL
   }
-  return DEFAULT_KNOWLEDGE_BASE_URL
 }
 
 export function DialogOhosPc() {
