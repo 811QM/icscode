@@ -48,31 +48,12 @@ Finally, use superpowers executing-plans to implement the adaptation step by ste
 
 Ask me for confirmation at each major step before proceeding.`
 
-const DEFAULT_SOW = `# HarmonyOS PC Adaptation SOW
-
-This document describes the scope of work for adapting open-source libraries to HarmonyOS PC.
-
-## Objectives
-- Analyze the source code structure and platform-specific components
-- Identify HarmonyOS adaptation requirements
-- Produce a detailed implementation plan
-- Execute the adaptation step by step with user confirmation at each stage
-
-## Deliverables
-- Adaptation scope analysis
-- Work breakdown structure
-- Implementation plan
-- Adapted source code
-
-Replace or extend this file to customize the adaptation workflow.`
-
 async function readDoc(name: string): Promise<string | undefined> {
   try {
     const text = await fs.readFile(path.join(DOCS_DIR, `${name}.md`), "utf-8")
     return text
   } catch {
     if (name === "prompt-template") return DEFAULT_PROMPT_TEMPLATE
-    if (name === "sow") return DEFAULT_SOW
     return undefined
   }
 }
