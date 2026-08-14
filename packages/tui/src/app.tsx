@@ -599,7 +599,7 @@ if (route.data.type === "plugin") {
         category: "Session",
         slashName: "ohos-pc",
         run: () => {
-          dialog.replace(() => <DialogOhosPc />)
+          dialog.replace(() => <DialogOhosPc promptRef={promptRef} />)
         },
       },
       {

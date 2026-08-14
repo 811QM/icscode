@@ -1,10 +1,10 @@
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
-import { usePromptRef } from "../context/prompt"
 import { usePromptWorkspace } from "./prompt/workspace"
 import { createSignal, onMount, Show } from "solid-js"
 import path from "path"
 import os from "os"
+import type { PromptRef } from "./prompt"
 
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
@@ -68,9 +68,8 @@ async function loadKnowledgeBaseUrl(): Promise<ConfigState> {
   }
 }
 
-export function DialogOhosPc() {
+export function DialogOhosPc(props: { promptRef: { current: PromptRef | undefined } }) {
   const dialog = useDialog()
-  const promptRef = usePromptRef()
   const workspace = usePromptWorkspace()
   const [state, setState] = createSignal<ConfigState>({ status: "loading" })
 
@@ -97,7 +96,7 @@ export function DialogOhosPc() {
           onSelect={(option) => {
             dialog.clear()
             const library = option.value
-            const current = promptRef.current
+            const current = props.promptRef.current
             if (!current) return
 
             current.set({
