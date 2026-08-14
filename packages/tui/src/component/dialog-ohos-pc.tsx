@@ -8,7 +8,7 @@ import { useToast } from "../ui/toast"
 import { createSignal } from "solid-js"
 import path from "path"
 import os from "os"
-import fs from "fs/promises"
+import { readText, writeText } from "../util/persistence"
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
   { title: "soapUI", value: "soapUI", description: "Web service testing tool (SOAP/REST)" },
@@ -50,19 +50,17 @@ Finally, use superpowers executing-plans to implement the adaptation step by ste
 Ask me for confirmation at each major step before proceeding.`
 
 async function ensureDocs(): Promise<void> {
-  await fs.mkdir(DOCS_DIR, { recursive: true }).catch(() => {})
   const templatePath = path.join(DOCS_DIR, "prompt-template.md")
   try {
-    await fs.access(templatePath)
+    await readText(templatePath)
   } catch {
-    await fs.writeFile(templatePath, DEFAULT_PROMPT_TEMPLATE, "utf-8").catch(() => {})
+    await writeText(templatePath, DEFAULT_PROMPT_TEMPLATE).catch(() => {})
   }
 }
 
 async function readDoc(name: string): Promise<string | undefined> {
   try {
-    const text = await fs.readFile(path.join(DOCS_DIR, `${name}.md`), "utf-8")
-    return text
+    return await readText(path.join(DOCS_DIR, `${name}.md`))
   } catch {
     if (name === "prompt-template") return DEFAULT_PROMPT_TEMPLATE
     return undefined
@@ -107,6 +105,7 @@ export function DialogOhosPc(props: {
   }
 
   async function startAdaptation(library: string) {
+    toast.show({ message: `[ohos-pc] starting ${library}`, variant: "info" })
     console.log("[/ohos-pc] startAdaptation called with:", library, "url:", url)
     if (!url) {
       setState({ status: "error", message: "Missing knowledge base URL" })
