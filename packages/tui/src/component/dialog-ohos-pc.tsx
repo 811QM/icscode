@@ -4,6 +4,7 @@ import { useSDK } from "../context/sdk"
 import { useRoute } from "../context/route"
 import { useLocal } from "../context/local"
 import { useProject } from "../context/project"
+import { useToast } from "../ui/toast"
 import { createSignal } from "solid-js"
 import path from "path"
 import os from "os"
@@ -85,6 +86,7 @@ export function DialogOhosPc(props: {
   const route = useRoute()
   const local = useLocal()
   const project = useProject()
+  const toast = useToast()
   const url = props.knowledgeBaseUrl
   const [state, setState] = createSignal<State>({ status: "ready" })
 
@@ -105,7 +107,11 @@ export function DialogOhosPc(props: {
   }
 
   async function startAdaptation(library: string) {
-    if (!url) return
+    console.log("[/ohos-pc] startAdaptation called with:", library, "url:", url)
+    if (!url) {
+      setState({ status: "error", message: "Missing knowledge base URL" })
+      return
+    }
     try {
       setState({ status: "loading", message: "Reading adaptation documents..." })
       await ensureDocs()
@@ -196,6 +202,8 @@ export function DialogOhosPc(props: {
       placeholder="Type to filter libraries..."
       options={LIBRARIES}
       onSelect={(option) => {
+        console.log("[/ohos-pc] onSelect fired:", option)
+        toast.show({ message: `Selected ${option.value}`, variant: "info" })
         void startAdaptation(option.value)
       }}
     />
