@@ -8,11 +8,6 @@ import { createSignal, Show } from "solid-js"
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
-import { execFile } from "child_process"
-import { promisify } from "util"
-
-const execFileAsync = promisify(execFile)
-
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
   { title: "soapUI", value: "soapUI", description: "Web service testing tool (SOAP/REST)" },
@@ -42,27 +37,11 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
-const CACHE_DIR = path.join(os.homedir(), ".cache", "icscode", "ohos-pc-note")
-const DOCS_DIR = "ohos-pc-docs"
-
-async function ensureKnowledgeBase(url: string): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true })
-  const gitDir = path.join(CACHE_DIR, ".git")
-  try {
-    const stats = await fs.stat(gitDir)
-    if (stats.isDirectory()) {
-      await execFileAsync("git", ["pull"], { cwd: CACHE_DIR })
-      return
-    }
-  } catch {
-    // not a repo yet, clone
-  }
-  await execFileAsync("git", ["clone", url, CACHE_DIR])
-}
+const DOCS_DIR = path.join(os.homedir(), ".cache", "icscode", "ohos-pc-docs")
 
 async function readDoc(name: string): Promise<string | undefined> {
   try {
-    const text = await fs.readFile(path.join(CACHE_DIR, DOCS_DIR, `${name}.md`), "utf-8")
+    const text = await fs.readFile(path.join(DOCS_DIR, `${name}.md`), "utf-8")
     return text
   } catch {
     return undefined
@@ -107,21 +86,13 @@ export function DialogOhosPc(props: {
 
   async function startAdaptation(library: string) {
     if (!url) return
-    setState({ status: "loading", message: `Cloning knowledge base from ${url}...` })
-    try {
-      await ensureKnowledgeBase(url)
-    } catch (error) {
-      setState({ status: "error", message: `Failed to clone knowledge base: ${error instanceof Error ? error.message : String(error)}` })
-      return
-    }
-
     setState({ status: "loading", message: "Reading adaptation documents..." })
     const template = await readDoc("prompt-template")
     const sow = await readDoc("sow")
     if (!template) {
       setState({
         status: "error",
-        message: `Missing ${DOCS_DIR}/prompt-template.md in the knowledge base repository.`,
+        message: `Missing ${DOCS_DIR}/prompt-template.md. Please create it with the adaptation prompt template.`,
       })
       return
     }
