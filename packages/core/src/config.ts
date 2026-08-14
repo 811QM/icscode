@@ -104,6 +104,13 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   experimental: ConfigExperimental.Experimental.pipe(Schema.optional),
   providers: Schema.Record(Schema.String, ConfigProvider.Info).pipe(Schema.optional),
+  ohos_pc: Schema.Struct({
+    knowledge_base_url: Schema.String.pipe(Schema.optional),
+  })
+    .pipe(Schema.optional)
+    .annotate({
+      description: "HarmonyOS PC adaptation settings",
+    }),
 }) {}
 
 export class Document extends Schema.Class<Document>("Config.Document")({
