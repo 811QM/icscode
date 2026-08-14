@@ -39,11 +39,40 @@ const LIBRARIES = [
 
 const DOCS_DIR = path.join(os.homedir(), ".cache", "icscode", "ohos-pc-docs")
 
+const DEFAULT_PROMPT_TEMPLATE = `Use the superpowers framework to guide me through HarmonyOS PC adaptation for {{library}}.
+
+First, fetch the HarmonyOS PC adaptation knowledge base from {{knowledgeBaseUrl}} and read the SOW (Statement of Work) documents.
+Then, use superpowers brainstorming to analyze the adaptation scope and requirements for {{library}}.
+After that, use superpowers writing-plans to create a detailed adaptation plan.
+Finally, use superpowers executing-plans to implement the adaptation step by step.
+
+Ask me for confirmation at each major step before proceeding.`
+
+const DEFAULT_SOW = `# HarmonyOS PC Adaptation SOW
+
+This document describes the scope of work for adapting open-source libraries to HarmonyOS PC.
+
+## Objectives
+- Analyze the source code structure and platform-specific components
+- Identify HarmonyOS adaptation requirements
+- Produce a detailed implementation plan
+- Execute the adaptation step by step with user confirmation at each stage
+
+## Deliverables
+- Adaptation scope analysis
+- Work breakdown structure
+- Implementation plan
+- Adapted source code
+
+Replace or extend this file to customize the adaptation workflow.`
+
 async function readDoc(name: string): Promise<string | undefined> {
   try {
     const text = await fs.readFile(path.join(DOCS_DIR, `${name}.md`), "utf-8")
     return text
   } catch {
+    if (name === "prompt-template") return DEFAULT_PROMPT_TEMPLATE
+    if (name === "sow") return DEFAULT_SOW
     return undefined
   }
 }
@@ -87,12 +116,13 @@ export function DialogOhosPc(props: {
   async function startAdaptation(library: string) {
     if (!url) return
     setState({ status: "loading", message: "Reading adaptation documents..." })
+    await fs.mkdir(DOCS_DIR, { recursive: true }).catch(() => {})
     const template = await readDoc("prompt-template")
     const sow = await readDoc("sow")
     if (!template) {
       setState({
         status: "error",
-        message: `Missing ${DOCS_DIR}/prompt-template.md. Please create it with the adaptation prompt template.`,
+        message: `Missing ${DOCS_DIR}/prompt-template.md and no default template available.`,
       })
       return
     }
