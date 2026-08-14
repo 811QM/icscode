@@ -1,7 +1,17 @@
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
-import { usePromptWorkspace } from "./prompt/workspace"
-import type { PromptRef } from "./prompt"
+import { useSDK } from "../context/sdk"
+import { useRoute } from "../context/route"
+import { useLocal } from "../context/local"
+import { useProject } from "../context/project"
+import { createSignal, Show } from "solid-js"
+import path from "path"
+import os from "os"
+import fs from "fs/promises"
+import { execFile } from "child_process"
+import { promisify } from "util"
+
+const execFileAsync = promisify(execFile)
 
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
@@ -32,13 +42,52 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
+const CACHE_DIR = path.join(os.homedir(), ".cache", "icscode", "ohos-pc-note")
+const DOCS_DIR = "ohos-pc-docs"
+
+async function ensureKnowledgeBase(url: string): Promise<void> {
+  await fs.mkdir(CACHE_DIR, { recursive: true })
+  const gitDir = path.join(CACHE_DIR, ".git")
+  try {
+    const stats = await fs.stat(gitDir)
+    if (stats.isDirectory()) {
+      await execFileAsync("git", ["pull"], { cwd: CACHE_DIR })
+      return
+    }
+  } catch {
+    // not a repo yet, clone
+  }
+  await execFileAsync("git", ["clone", url, CACHE_DIR])
+}
+
+async function readDoc(name: string): Promise<string | undefined> {
+  try {
+    const text = await fs.readFile(path.join(CACHE_DIR, DOCS_DIR, `${name}.md`), "utf-8")
+    return text
+  } catch {
+    return undefined
+  }
+}
+
+function interpolate(template: string, values: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] ?? `{{${key}}}`)
+}
+
+type State =
+  | { status: "ready" }
+  | { status: "loading"; message: string }
+  | { status: "error"; message: string }
+
 export function DialogOhosPc(props: {
-  promptRef: { current: PromptRef | undefined }
   knowledgeBaseUrl?: string
 }) {
   const dialog = useDialog()
-  const workspace = usePromptWorkspace()
+  const sdk = useSDK()
+  const route = useRoute()
+  const local = useLocal()
+  const project = useProject()
   const url = props.knowledgeBaseUrl
+  const [state, setState] = createSignal<State>({ status: "ready" })
 
   if (!url) {
     return (
@@ -56,32 +105,107 @@ export function DialogOhosPc(props: {
     )
   }
 
-  return (
-        <DialogSelect
-          title="Select HarmonyOS PC library to adapt"
-          placeholder="Type to filter libraries..."
-          options={LIBRARIES}
-          onSelect={(option) => {
-            dialog.clear()
-            const library = option.value
-            const current = props.promptRef.current
-            if (!current) return
+  async function startAdaptation(library: string) {
+    if (!url) return
+    setState({ status: "loading", message: `Cloning knowledge base from ${url}...` })
+    try {
+      await ensureKnowledgeBase(url)
+    } catch (error) {
+      setState({ status: "error", message: `Failed to clone knowledge base: ${error instanceof Error ? error.message : String(error)}` })
+      return
+    }
 
-            current.set({
-              input: [
-                `Use the superpowers framework to guide me through HarmonyOS PC adaptation for ${library}.`,
-                ``,
-                `First, fetch the HarmonyOS PC adaptation knowledge base from ${url} and read the SOW (Statement of Work) documents.`,
-                `Then, use superpowers brainstorming to analyze the adaptation scope and requirements for ${library}.`,
-                `After that, use superpowers writing-plans to create a detailed adaptation plan.`,
-                `Finally, use superpowers executing-plans to implement the adaptation step by step.`,
-                ``,
-                `Ask me for confirmation at each major step before proceeding.`,
-              ].join("\n"),
-              parts: [],
-            })
-            current.focus()
-          }}
-        />
+    setState({ status: "loading", message: "Reading adaptation documents..." })
+    const template = await readDoc("prompt-template")
+    const sow = await readDoc("sow")
+    if (!template) {
+      setState({
+        status: "error",
+        message: `Missing ${DOCS_DIR}/prompt-template.md in the knowledge base repository.`,
+      })
+      return
+    }
+
+    const system = [
+      interpolate(template, { library, knowledgeBaseUrl: url }),
+      sow ? `\n\n## SOW\n\n${sow}` : "",
+    ].join("")
+
+    setState({ status: "loading", message: "Starting adaptation session..." })
+
+    let sessionID: string | undefined
+    if (route.data.type === "session") {
+      sessionID = route.data.sessionID
+    } else {
+      const model = local.model.current()
+      const agent = local.agent.current()
+      if (!model || !agent) {
+        setState({ status: "error", message: "No model or agent selected. Please start a session first." })
+        return
+      }
+      const directory = project.instance.path().directory
+      const workspace = project.workspace.current()
+      const createResult = await sdk.client.session.create({
+        directory,
+        workspace,
+        agent: agent.name,
+        model: {
+          providerID: model.providerID,
+          id: model.modelID,
+        },
+        title: `HarmonyOS PC adaptation: ${library}`,
+      })
+      if (createResult.error || !createResult.data) {
+        setState({
+          status: "error",
+          message: `Failed to create session: ${createResult.error ? String(createResult.error) : "no response"}`,
+        })
+        return
+      }
+      sessionID = createResult.data.id
+    }
+
+    const promptResult = await sdk.client.session.prompt({
+      sessionID,
+      system,
+      parts: [{ type: "text", text: `Please start the HarmonyOS PC adaptation for ${library}.` }],
+    })
+
+    if (promptResult.error) {
+      setState({ status: "error", message: `Failed to send prompt: ${String(promptResult.error)}` })
+      return
+    }
+
+    dialog.clear()
+    route.navigate({ type: "session", sessionID })
+  }
+
+  return (
+    <Show
+      when={state().status === "ready"}
+      fallback={(() => {
+        const current = state()
+        return (
+          <box flexDirection="column" gap={1} padding={2}>
+            <text fg="red">
+              {current.status === "loading" ? "Loading..." : "Error"}
+            </text>
+            <text>
+              {current.status === "loading" || current.status === "error" ? current.message : ""}
+            </text>
+            <text fg="gray">Press Esc to close</text>
+          </box>
+        )
+      })()}
+    >
+      <DialogSelect
+        title="Select HarmonyOS PC library to adapt"
+        placeholder="Type to filter libraries..."
+        options={LIBRARIES}
+        onSelect={(option) => {
+          void startAdaptation(option.value)
+        }}
+      />
+    </Show>
   )
 }

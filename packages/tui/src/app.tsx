@@ -600,10 +600,7 @@ if (route.data.type === "plugin") {
         slashName: "ohos-pc",
         run: () => {
           dialog.replace(() => (
-            <DialogOhosPc
-              promptRef={promptRef}
-              knowledgeBaseUrl={sync.data.config.ohos_pc?.knowledge_base_url}
-            />
+            <DialogOhosPc knowledgeBaseUrl={sync.data.config.ohos_pc?.knowledge_base_url} />
           ))
         },
       },
