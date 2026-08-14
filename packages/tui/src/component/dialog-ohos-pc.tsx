@@ -48,6 +48,16 @@ Finally, use superpowers executing-plans to implement the adaptation step by ste
 
 Ask me for confirmation at each major step before proceeding.`
 
+async function ensureDocs(): Promise<void> {
+  await fs.mkdir(DOCS_DIR, { recursive: true }).catch(() => {})
+  const templatePath = path.join(DOCS_DIR, "prompt-template.md")
+  try {
+    await fs.access(templatePath)
+  } catch {
+    await fs.writeFile(templatePath, DEFAULT_PROMPT_TEMPLATE, "utf-8").catch(() => {})
+  }
+}
+
 async function readDoc(name: string): Promise<string | undefined> {
   try {
     const text = await fs.readFile(path.join(DOCS_DIR, `${name}.md`), "utf-8")
@@ -97,7 +107,7 @@ export function DialogOhosPc(props: {
   async function startAdaptation(library: string) {
     if (!url) return
     setState({ status: "loading", message: "Reading adaptation documents..." })
-    await fs.mkdir(DOCS_DIR, { recursive: true }).catch(() => {})
+    await ensureDocs()
     const template = await readDoc("prompt-template")
     const sow = await readDoc("sow")
     if (!template) {
