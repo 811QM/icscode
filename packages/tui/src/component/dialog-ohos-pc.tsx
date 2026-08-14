@@ -2,11 +2,9 @@ import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
 import { usePromptRef } from "../context/prompt"
 import { usePromptWorkspace } from "./prompt/workspace"
-import { createResource, createSignal, onMount } from "solid-js"
+import { createSignal, onMount, Show } from "solid-js"
 import path from "path"
 import os from "os"
-
-const DEFAULT_KNOWLEDGE_BASE_URL = "git@gitcode.com:QM811/ohos-pc-note.git"
 
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
@@ -37,16 +35,36 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
-async function loadKnowledgeBaseUrl() {
+type ConfigState =
+  | { status: "loading" }
+  | { status: "ready"; knowledgeBaseUrl: string }
+  | { status: "error"; message: string }
+
+async function loadKnowledgeBaseUrl(): Promise<ConfigState> {
   const configPath = path.join(os.homedir(), ".config", "icscode", "icscode.json")
   try {
     const file = Bun.file(configPath)
     const exists = await file.exists()
-    if (!exists) return DEFAULT_KNOWLEDGE_BASE_URL
+    if (!exists) {
+      return {
+        status: "error",
+        message: `Configuration file not found: ${configPath}\n\nPlease create it with the following content:\n\n{\n  "ohos_pc": {\n    "knowledge_base_url": "git@gitcode.com:YOUR_ORG/YOUR_REPO.git"\n  }\n}\n\nReplace YOUR_ORG/YOUR_REPO with your actual GitCode repository.`,
+      }
+    }
     const config = await file.json()
-    return config?.ohos_pc?.knowledge_base_url ?? DEFAULT_KNOWLEDGE_BASE_URL
-  } catch {
-    return DEFAULT_KNOWLEDGE_BASE_URL
+    const url = config?.ohos_pc?.knowledge_base_url
+    if (!url) {
+      return {
+        status: "error",
+        message: `Missing ohos_pc.knowledge_base_url in ${configPath}\n\nPlease add the following to your configuration:\n\n"ohos_pc": {\n  "knowledge_base_url": "git@gitcode.com:YOUR_ORG/YOUR_REPO.git"\n}`,
+      }
+    }
+    return { status: "ready", knowledgeBaseUrl: url }
+  } catch (error) {
+    return {
+      status: "error",
+      message: `Failed to read configuration from ${configPath}\n\nError: ${error instanceof Error ? error.message : String(error)}\n\nPlease ensure the file contains valid JSON with the ohos_pc.knowledge_base_url field.`,
+    }
   }
 }
 
@@ -54,38 +72,51 @@ export function DialogOhosPc() {
   const dialog = useDialog()
   const promptRef = usePromptRef()
   const workspace = usePromptWorkspace()
-  const [knowledgeBaseUrl, setKnowledgeBaseUrl] = createSignal(DEFAULT_KNOWLEDGE_BASE_URL)
+  const [state, setState] = createSignal<ConfigState>({ status: "loading" })
 
   onMount(() => {
-    void loadKnowledgeBaseUrl().then(setKnowledgeBaseUrl)
+    void loadKnowledgeBaseUrl().then(setState)
   })
 
   return (
-    <DialogSelect
-      title="Select HarmonyOS PC library to adapt"
-      placeholder="Type to filter libraries..."
-      options={LIBRARIES}
-      onSelect={(option) => {
-        dialog.clear()
-        const library = option.value
-        const current = promptRef.current
-        if (!current) return
+    <Show
+      when={state().status === "ready"}
+      fallback={
+        <box flexDirection="column" gap={1} padding={2}>
+          <text fg="red">Configuration Error</text>
+          <text>{state().status === "loading" ? "Loading configuration..." : state().message}</text>
+          <text fg="gray">Press Esc to close</text>
+        </box>
+      }
+    >
+      {(ready) => (
+        <DialogSelect
+          title="Select HarmonyOS PC library to adapt"
+          placeholder="Type to filter libraries..."
+          options={LIBRARIES}
+          onSelect={(option) => {
+            dialog.clear()
+            const library = option.value
+            const current = promptRef.current
+            if (!current) return
 
-        current.set({
-          input: [
-            `Use the superpowers framework to guide me through HarmonyOS PC adaptation for ${library}.`,
-            ``,
-            `First, fetch the HarmonyOS PC adaptation knowledge base from ${knowledgeBaseUrl()} and read the SOW (Statement of Work) documents.`,
-            `Then, use superpowers brainstorming to analyze the adaptation scope and requirements for ${library}.`,
-            `After that, use superpowers writing-plans to create a detailed adaptation plan.`,
-            `Finally, use superpowers executing-plans to implement the adaptation step by step.`,
-            ``,
-            `Ask me for confirmation at each major step before proceeding.`,
-          ].join("\n"),
-          parts: [],
-        })
-        current.focus()
-      }}
-    />
+            current.set({
+              input: [
+                `Use the superpowers framework to guide me through HarmonyOS PC adaptation for ${library}.`,
+                ``,
+                `First, fetch the HarmonyOS PC adaptation knowledge base from ${ready().knowledgeBaseUrl} and read the SOW (Statement of Work) documents.`,
+                `Then, use superpowers brainstorming to analyze the adaptation scope and requirements for ${library}.`,
+                `After that, use superpowers writing-plans to create a detailed adaptation plan.`,
+                `Finally, use superpowers executing-plans to implement the adaptation step by step.`,
+                ``,
+                `Ask me for confirmation at each major step before proceeding.`,
+              ].join("\n"),
+              parts: [],
+            })
+            current.focus()
+          }}
+        />
+      )}
+    </Show>
   )
 }
