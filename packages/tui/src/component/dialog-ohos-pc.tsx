@@ -2,8 +2,11 @@ import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
 import { usePromptRef } from "../context/prompt"
 import { usePromptWorkspace } from "./prompt/workspace"
+import { createResource, createSignal, onMount } from "solid-js"
+import path from "path"
+import os from "os"
 
-const KNOWLEDGE_BASE_URL = "https://gitcode.com/811QM/harmony-pc-knowledge.git"
+const DEFAULT_KNOWLEDGE_BASE_URL = "git@gitcode.com:QM811/ohos-pc-note.git"
 
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
@@ -34,10 +37,28 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
+async function loadKnowledgeBaseUrl() {
+  const configPath = path.join(os.homedir(), ".config", "icscode", "icscode.json")
+  try {
+    const file = Bun.file(configPath)
+    const exists = await file.exists()
+    if (!exists) return DEFAULT_KNOWLEDGE_BASE_URL
+    const config = await file.json()
+    return config?.ohos_pc?.knowledge_base_url ?? DEFAULT_KNOWLEDGE_BASE_URL
+  } catch {
+    return DEFAULT_KNOWLEDGE_BASE_URL
+  }
+}
+
 export function DialogOhosPc() {
   const dialog = useDialog()
   const promptRef = usePromptRef()
   const workspace = usePromptWorkspace()
+  const [knowledgeBaseUrl, setKnowledgeBaseUrl] = createSignal(DEFAULT_KNOWLEDGE_BASE_URL)
+
+  onMount(() => {
+    void loadKnowledgeBaseUrl().then(setKnowledgeBaseUrl)
+  })
 
   return (
     <DialogSelect
@@ -54,7 +75,7 @@ export function DialogOhosPc() {
           input: [
             `Use the superpowers framework to guide me through HarmonyOS PC adaptation for ${library}.`,
             ``,
-            `First, fetch the HarmonyOS PC adaptation knowledge base from ${KNOWLEDGE_BASE_URL} and read the SOW (Statement of Work) documents.`,
+            `First, fetch the HarmonyOS PC adaptation knowledge base from ${knowledgeBaseUrl()} and read the SOW (Statement of Work) documents.`,
             `Then, use superpowers brainstorming to analyze the adaptation scope and requirements for ${library}.`,
             `After that, use superpowers writing-plans to create a detailed adaptation plan.`,
             `Finally, use superpowers executing-plans to implement the adaptation step by step.`,
