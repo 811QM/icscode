@@ -2013,6 +2013,9 @@ export type Config = {
     preserve_recent_tokens?: number
     reserved?: number
   }
+  ohos_pc?: {
+    knowledge_base_url?: string
+  }
   experimental?: {
     disable_paste_summary?: boolean
     batch_tool?: boolean

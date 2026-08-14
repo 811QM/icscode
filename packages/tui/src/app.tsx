@@ -599,7 +599,12 @@ if (route.data.type === "plugin") {
         category: "Session",
         slashName: "ohos-pc",
         run: () => {
-          dialog.replace(() => <DialogOhosPc promptRef={promptRef} />)
+          dialog.replace(() => (
+            <DialogOhosPc
+              promptRef={promptRef}
+              knowledgeBaseUrl={sync.data.config.ohos_pc?.knowledge_base_url}
+            />
+          ))
         },
       },
       {

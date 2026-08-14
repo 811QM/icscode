@@ -1,9 +1,6 @@
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
 import { usePromptWorkspace } from "./prompt/workspace"
-import { createSignal, onMount, Show } from "solid-js"
-import path from "path"
-import os from "os"
 import type { PromptRef } from "./prompt"
 
 const LIBRARIES = [
@@ -35,60 +32,31 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
-type ConfigState =
-  | { status: "loading" }
-  | { status: "ready"; knowledgeBaseUrl: string }
-  | { status: "error"; message: string }
-
-async function loadKnowledgeBaseUrl(): Promise<ConfigState> {
-  const configPath = path.join(os.homedir(), ".config", "icscode", "icscode.json")
-  try {
-    const file = Bun.file(configPath)
-    const exists = await file.exists()
-    if (!exists) {
-      return {
-        status: "error",
-        message: `Configuration file not found: ${configPath}\n\nPlease create it with the following content:\n\n{\n  "ohos_pc": {\n    "knowledge_base_url": "git@gitcode.com:YOUR_ORG/YOUR_REPO.git"\n  }\n}\n\nReplace YOUR_ORG/YOUR_REPO with your actual GitCode repository.`,
-      }
-    }
-    const config = await file.json()
-    const url = config?.ohos_pc?.knowledge_base_url
-    if (!url) {
-      return {
-        status: "error",
-        message: `Missing ohos_pc.knowledge_base_url in ${configPath}\n\nPlease add the following to your configuration:\n\n"ohos_pc": {\n  "knowledge_base_url": "git@gitcode.com:YOUR_ORG/YOUR_REPO.git"\n}`,
-      }
-    }
-    return { status: "ready", knowledgeBaseUrl: url }
-  } catch (error) {
-    return {
-      status: "error",
-      message: `Failed to read configuration from ${configPath}\n\nError: ${error instanceof Error ? error.message : String(error)}\n\nPlease ensure the file contains valid JSON with the ohos_pc.knowledge_base_url field.`,
-    }
-  }
-}
-
-export function DialogOhosPc(props: { promptRef: { current: PromptRef | undefined } }) {
+export function DialogOhosPc(props: {
+  promptRef: { current: PromptRef | undefined }
+  knowledgeBaseUrl?: string
+}) {
   const dialog = useDialog()
   const workspace = usePromptWorkspace()
-  const [state, setState] = createSignal<ConfigState>({ status: "loading" })
+  const url = props.knowledgeBaseUrl
 
-  onMount(() => {
-    void loadKnowledgeBaseUrl().then(setState)
-  })
+  if (!url) {
+    return (
+      <box flexDirection="column" gap={1} padding={2}>
+        <text fg="red">Configuration Error</text>
+        <text>
+          Missing ohos_pc.knowledge_base_url in ~/.config/icscode/icscode.json{"\n\n"}
+          Please add:{"\n"}
+          {"  \"ohos_pc\": {"}{"\n"}
+          {"    \"knowledge_base_url\": \"git@gitcode.com:YOUR_ORG/YOUR_REPO.git\""}{"\n"}
+          {"  }"}
+        </text>
+        <text fg="gray">Press Esc to close</text>
+      </box>
+    )
+  }
 
   return (
-    <Show
-      when={state().status === "ready"}
-      fallback={
-        <box flexDirection="column" gap={1} padding={2}>
-          <text fg="red">Configuration Error</text>
-          <text>{state().status === "loading" ? "Loading configuration..." : state().message}</text>
-          <text fg="gray">Press Esc to close</text>
-        </box>
-      }
-    >
-      {(ready) => (
         <DialogSelect
           title="Select HarmonyOS PC library to adapt"
           placeholder="Type to filter libraries..."
@@ -103,7 +71,7 @@ export function DialogOhosPc(props: { promptRef: { current: PromptRef | undefine
               input: [
                 `Use the superpowers framework to guide me through HarmonyOS PC adaptation for ${library}.`,
                 ``,
-                `First, fetch the HarmonyOS PC adaptation knowledge base from ${ready().knowledgeBaseUrl} and read the SOW (Statement of Work) documents.`,
+                `First, fetch the HarmonyOS PC adaptation knowledge base from ${url} and read the SOW (Statement of Work) documents.`,
                 `Then, use superpowers brainstorming to analyze the adaptation scope and requirements for ${library}.`,
                 `After that, use superpowers writing-plans to create a detailed adaptation plan.`,
                 `Finally, use superpowers executing-plans to implement the adaptation step by step.`,
@@ -115,7 +83,5 @@ export function DialogOhosPc(props: { promptRef: { current: PromptRef | undefine
             current.focus()
           }}
         />
-      )}
-    </Show>
   )
 }
