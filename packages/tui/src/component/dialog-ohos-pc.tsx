@@ -113,69 +113,8 @@ export function DialogOhosPc(props: {
     }
     try {
       setState({ status: "loading", message: "Reading adaptation documents..." })
-      await ensureDocs()
-      const template = await readDoc("prompt-template")
-      const sow = await readDoc("sow")
-      if (!template) {
-        setState({
-          status: "error",
-          message: `Missing ${DOCS_DIR}/prompt-template.md and no default template available.`,
-        })
-        return
-      }
-
-      const system = [
-        interpolate(template, { library, knowledgeBaseUrl: url }),
-        sow ? `\n\n## SOW\n\n${sow}` : "",
-      ].join("")
-
-      setState({ status: "loading", message: "Starting adaptation session..." })
-
-      let sessionID: string | undefined
-      if (route.data.type === "session") {
-        sessionID = route.data.sessionID
-      } else {
-        const model = local.model.current()
-        const agent = local.agent.current()
-        if (!model || !agent) {
-          setState({ status: "error", message: "No model or agent selected. Please start a session first." })
-          return
-        }
-        const directory = project.instance.path().directory
-        const workspace = project.workspace.current()
-        const createResult = await sdk.client.session.create({
-          directory,
-          workspace,
-          agent: agent.name,
-          model: {
-            providerID: model.providerID,
-            id: model.modelID,
-          },
-          title: `HarmonyOS PC adaptation: ${library}`,
-        })
-        if (createResult.error || !createResult.data) {
-          setState({
-            status: "error",
-            message: `Failed to create session: ${createResult.error ? String(createResult.error) : "no response"}`,
-          })
-          return
-        }
-        sessionID = createResult.data.id
-      }
-
-      const promptResult = await sdk.client.session.prompt({
-        sessionID,
-        system,
-        parts: [{ type: "text", text: `Please start the HarmonyOS PC adaptation for ${library}.` }],
-      })
-
-      if (promptResult.error) {
-        setState({ status: "error", message: `Failed to send prompt: ${String(promptResult.error)}` })
-        return
-      }
-
-      dialog.clear()
-      route.navigate({ type: "session", sessionID })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      setState({ status: "error", message: "TEST: reactivity check" })
     } catch (error) {
       console.error("[/ohos-pc] startAdaptation failed:", error)
       setState({ status: "error", message: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` })
