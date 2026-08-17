@@ -168,7 +168,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
       }
 
       dialog.replace(() => <StatusDialog title="Loading..." message="Sending prompt..." />)
-      const promptResult = await sdk.client.session.prompt({
+      const promptResult = await sdk.client.session.promptAsync({
         sessionID,
         system,
         parts: [{ type: "text", text: `Please start the HarmonyOS PC adaptation for ${library}.` }],
