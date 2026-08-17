@@ -5,7 +5,7 @@ import { useRoute } from "../context/route"
 import { useLocal } from "../context/local"
 import { useProject } from "../context/project"
 import { useToast } from "../ui/toast"
-import { createSignal } from "solid-js"
+import { createSignal, Switch, Match } from "solid-js"
 import path from "path"
 import os from "os"
 import { readText, writeText } from "../util/persistence"
@@ -72,7 +72,7 @@ function interpolate(template: string, values: Record<string, string>): string {
 }
 
 type State =
-  | { status: "ready" }
+  | { status: "ready"; message?: string }
   | { status: "loading"; message: string }
   | { status: "error"; message: string }
 
@@ -182,29 +182,34 @@ export function DialogOhosPc(props: {
     }
   }
 
-  const currentState = state()
-  if (currentState.status !== "ready") {
-    return (
-      <box flexDirection="column" gap={1} padding={2}>
-        <text fg="red">{currentState.status === "loading" ? "Loading..." : "Error"}</text>
-        <text>
-          {currentState.status === "loading" || currentState.status === "error" ? currentState.message : ""}
-        </text>
-        <text fg="gray">Press Esc to close</text>
-      </box>
-    )
-  }
-
   return (
-    <DialogSelect
-      title="Select HarmonyOS PC library to adapt"
-      placeholder="Type to filter libraries..."
-      options={LIBRARIES}
-      onSelect={(option) => {
-        console.log("[/ohos-pc] onSelect fired:", option)
-        toast.show({ message: `Selected ${option.value}`, variant: "info" })
-        void startAdaptation(option.value)
-      }}
-    />
+    <Switch>
+      <Match when={state().status === "ready"}>
+        <DialogSelect
+          title="Select HarmonyOS PC library to adapt"
+          placeholder="Type to filter libraries..."
+          options={LIBRARIES}
+          onSelect={(option) => {
+            console.log("[/ohos-pc] onSelect fired:", option)
+            toast.show({ message: `Selected ${option.value}`, variant: "info" })
+            void startAdaptation(option.value)
+          }}
+        />
+      </Match>
+      <Match when={state().status === "loading"}>
+        <box flexDirection="column" gap={1} padding={2}>
+          <text fg="red">Loading...</text>
+          <text>{state().message}</text>
+          <text fg="gray">Press Esc to close</text>
+        </box>
+      </Match>
+      <Match when={state().status === "error"}>
+        <box flexDirection="column" gap={1} padding={2}>
+          <text fg="red">Error</text>
+          <text>{state().message}</text>
+          <text fg="gray">Press Esc to close</text>
+        </box>
+      </Match>
+    </Switch>
   )
 }
