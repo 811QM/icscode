@@ -5,10 +5,10 @@ import { useRoute } from "../context/route"
 import { useLocal } from "../context/local"
 import { useProject } from "../context/project"
 import { useToast } from "../ui/toast"
-import { createSignal, Switch, Match } from "solid-js"
 import path from "path"
 import os from "os"
 import { readText, writeText } from "../util/persistence"
+
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
   { title: "soapUI", value: "soapUI", description: "Web service testing tool (SOAP/REST)" },
@@ -71,14 +71,17 @@ function interpolate(template: string, values: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] ?? `{{${key}}}`)
 }
 
-type State =
-  | { status: "ready"; message?: string }
-  | { status: "loading"; message: string }
-  | { status: "error"; message: string }
+function StatusDialog(props: { title: string; message: string }) {
+  return (
+    <box flexDirection="column" gap={1} padding={2}>
+      <text fg="red">{props.title}</text>
+      <text>{props.message}</text>
+      <text fg="gray">Press Esc to close</text>
+    </box>
+  )
+}
 
-export function DialogOhosPc(props: {
-  knowledgeBaseUrl?: string
-}) {
+export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
   const dialog = useDialog()
   const sdk = useSDK()
   const route = useRoute()
@@ -86,7 +89,6 @@ export function DialogOhosPc(props: {
   const project = useProject()
   const toast = useToast()
   const url = props.knowledgeBaseUrl
-  const [state, setState] = createSignal<State>({ status: "ready" })
 
   if (!url) {
     return (
@@ -104,51 +106,100 @@ export function DialogOhosPc(props: {
     )
   }
 
-  async function startAdaptation(library: string) {
+  async function startAdaptation(library: string, knowledgeBaseUrl: string) {
     toast.show({ message: `[ohos-pc] starting ${library}`, variant: "info" })
-    console.log("[/ohos-pc] startAdaptation called with:", library, "url:", url)
-    if (!url) {
-      setState({ status: "error", message: "Missing knowledge base URL" })
-      return
-    }
+    dialog.replace(() => <StatusDialog title="Loading..." message={`Adapting ${library}...`} />)
     try {
-      setState({ status: "loading", message: "Reading adaptation documents..." })
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setState({ status: "error", message: "TEST: reactivity check" })
+      await ensureDocs()
+      const template = await readDoc("prompt-template")
+      const sow = await readDoc("sow")
+      if (!template) {
+        dialog.replace(() => (
+          <StatusDialog
+            title="Error"
+            message={`Missing ${DOCS_DIR}/prompt-template.md and no default template available.`}
+          />
+        ))
+        return
+      }
+
+      const system = [
+        interpolate(template, { library, knowledgeBaseUrl }),
+        sow ? `\n\n## SOW\n\n${sow}` : "",
+      ].join("")
+
+      dialog.replace(() => <StatusDialog title="Loading..." message="Starting adaptation session..." />)
+
+      let sessionID: string
+      if (route.data.type === "session") {
+        sessionID = route.data.sessionID
+      } else {
+        const model = local.model.current()
+        const agent = local.agent.current()
+        if (!model || !agent) {
+          dialog.replace(() => (
+            <StatusDialog title="Error" message="No model or agent selected. Please start a session first." />
+          ))
+          return
+        }
+        const directory = project.instance.path().directory
+        const workspace = project.workspace.current()
+        const createResult = await sdk.client.session.create({
+          directory,
+          workspace,
+          agent: agent.name,
+          model: {
+            providerID: model.providerID,
+            id: model.modelID,
+          },
+          title: `HarmonyOS PC adaptation: ${library}`,
+        })
+        if (createResult.error || !createResult.data) {
+          dialog.replace(() => (
+            <StatusDialog
+              title="Error"
+              message={`Failed to create session: ${createResult.error ? String(createResult.error) : "no response"}`}
+            />
+          ))
+          return
+        }
+        sessionID = createResult.data.id
+      }
+
+      const promptResult = await sdk.client.session.prompt({
+        sessionID,
+        system,
+        parts: [{ type: "text", text: `Please start the HarmonyOS PC adaptation for ${library}.` }],
+      })
+
+      if (promptResult.error) {
+        dialog.replace(() => (
+          <StatusDialog title="Error" message={`Failed to send prompt: ${String(promptResult.error)}`} />
+        ))
+        return
+      }
+
+      dialog.clear()
+      route.navigate({ type: "session", sessionID })
     } catch (error) {
       console.error("[/ohos-pc] startAdaptation failed:", error)
-      setState({ status: "error", message: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` })
+      dialog.replace(() => (
+        <StatusDialog
+          title="Error"
+          message={`Unexpected error: ${error instanceof Error ? error.message : String(error)}`}
+        />
+      ))
     }
   }
 
   return (
-    <Switch>
-      <Match when={state().status === "ready"}>
-        <DialogSelect
-          title="Select HarmonyOS PC library to adapt"
-          placeholder="Type to filter libraries..."
-          options={LIBRARIES}
-          onSelect={(option) => {
-            console.log("[/ohos-pc] onSelect fired:", option)
-            toast.show({ message: `Selected ${option.value}`, variant: "info" })
-            void startAdaptation(option.value)
-          }}
-        />
-      </Match>
-      <Match when={state().status === "loading"}>
-        <box flexDirection="column" gap={1} padding={2}>
-          <text fg="red">Loading...</text>
-          <text>{state().message}</text>
-          <text fg="gray">Press Esc to close</text>
-        </box>
-      </Match>
-      <Match when={state().status === "error"}>
-        <box flexDirection="column" gap={1} padding={2}>
-          <text fg="red">Error</text>
-          <text>{state().message}</text>
-          <text fg="gray">Press Esc to close</text>
-        </box>
-      </Match>
-    </Switch>
+    <DialogSelect
+      title="Select HarmonyOS PC library to adapt"
+      placeholder="Type to filter libraries..."
+      options={LIBRARIES}
+      onSelect={(option) => {
+        void startAdaptation(option.value, url)
+      }}
+    />
   )
 }
