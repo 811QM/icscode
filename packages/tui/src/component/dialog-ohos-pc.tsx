@@ -142,6 +142,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
           ))
           return
         }
+        dialog.replace(() => <StatusDialog title="Loading..." message="Creating session..." />)
         const directory = project.instance.path().directory
         const workspace = project.workspace.current()
         const createResult = await sdk.client.session.create({
@@ -166,6 +167,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
         sessionID = createResult.data.id
       }
 
+      dialog.replace(() => <StatusDialog title="Loading..." message="Sending prompt..." />)
       const promptResult = await sdk.client.session.prompt({
         sessionID,
         system,
@@ -179,6 +181,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
         return
       }
 
+      dialog.replace(() => <StatusDialog title="Loading..." message="Opening session..." />)
       dialog.clear()
       route.navigate({ type: "session", sessionID })
     } catch (error) {
