@@ -35,16 +35,6 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
-function StatusDialog(props: { title: string; message: string }) {
-  return (
-    <box flexDirection="column" gap={1} padding={2}>
-      <text fg="red">{props.title}</text>
-      <text>{props.message}</text>
-      <text fg="gray">Press Esc to close</text>
-    </box>
-  )
-}
-
 export function DialogOhosPc() {
   const dialog = useDialog()
   const sdk = useSDK()
@@ -54,8 +44,8 @@ export function DialogOhosPc() {
   const toast = useToast()
 
   async function startAdaptation(library: string) {
+    dialog.clear()
     toast.show({ message: `[ohos-pc] 鸿蒙化 ${library}`, variant: "info" })
-    dialog.replace(() => <StatusDialog title="Loading..." message={`准备鸿蒙化 ${library}...`} />)
 
     try {
       let sessionID: string
@@ -65,12 +55,9 @@ export function DialogOhosPc() {
         const model = local.model.current()
         const agent = local.agent.current()
         if (!model || !agent) {
-          dialog.replace(() => (
-            <StatusDialog title="Error" message="No model or agent selected. Please start a session first." />
-          ))
+          toast.show({ message: "No model or agent selected. Please start a session first.", variant: "error" })
           return
         }
-        dialog.replace(() => <StatusDialog title="Loading..." message="Creating session..." />)
         const directory = project.instance.path().directory
         const workspace = project.workspace.current()
         const createResult = await sdk.client.session.create({
@@ -84,40 +71,32 @@ export function DialogOhosPc() {
           title: `鸿蒙化: ${library}`,
         })
         if (createResult.error || !createResult.data) {
-          dialog.replace(() => (
-            <StatusDialog
-              title="Error"
-              message={`Failed to create session: ${createResult.error ? String(createResult.error) : "no response"}`}
-            />
-          ))
+          toast.show({
+            message: `创建 session 失败: ${createResult.error ? String(createResult.error) : "no response"}`,
+            variant: "error",
+          })
           return
         }
         sessionID = createResult.data.id
       }
 
-      dialog.replace(() => <StatusDialog title="Loading..." message="Sending prompt..." />)
       const promptResult = await sdk.client.session.promptAsync({
         sessionID,
         parts: [{ type: "text", text: `鸿蒙化 ${library}` }],
       })
 
       if (promptResult.error) {
-        dialog.replace(() => (
-          <StatusDialog title="Error" message={`Failed to send prompt: ${String(promptResult.error)}`} />
-        ))
+        toast.show({ message: `发送 prompt 失败: ${String(promptResult.error)}`, variant: "error" })
         return
       }
 
-      dialog.clear()
       route.navigate({ type: "session", sessionID })
     } catch (error) {
       console.error("[/ohos-pc] startAdaptation failed:", error)
-      dialog.replace(() => (
-        <StatusDialog
-          title="Error"
-          message={`Unexpected error: ${error instanceof Error ? error.message : String(error)}`}
-        />
-      ))
+      toast.show({
+        message: `鸿蒙化失败: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "error",
+      })
     }
   }
 
