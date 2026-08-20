@@ -27,6 +27,7 @@ import {
 import { TuiPathsProvider, TuiStartupProvider, TuiTerminalEnvironmentProvider, useTuiStartup } from "./context/runtime"
 import { DialogProvider, useDialog } from "./ui/dialog"
 import { DialogProvider as DialogProviderList } from "./component/dialog-provider"
+import { DialogOhosPc } from "./component/dialog-ohos-pc"
 import { ErrorComponent } from "./component/error-component"
 import { PluginRouteMissing } from "./component/plugin-route-missing"
 import { ProjectProvider, useProject } from "./context/project"
@@ -590,6 +591,15 @@ if (route.data.type === "plugin") {
             type: "home",
           })
           dialog.clear()
+        },
+      },
+      {
+        name: "ohos-pc",
+        title: "鸿蒙化开源库",
+        category: "Session",
+        slashName: "ohos-pc",
+        run: () => {
+          dialog.replace(() => <DialogOhosPc />)
         },
       },
       {
