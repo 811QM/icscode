@@ -68,7 +68,6 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
     ),
     experimental: info.experimental?.policies && { policies: info.experimental.policies },
     providers: providers(info.provider),
-    ohos_pc: info.ohos_pc,
   }
 }
 

@@ -163,13 +163,6 @@ export const Info = Schema.Struct({
       }),
     }),
   ),
-  ohos_pc: Schema.optional(
-    Schema.Struct({
-      knowledge_base_url: Schema.optional(Schema.String).annotate({
-        description: "Git repository URL for the HarmonyOS PC adaptation knowledge base",
-      }),
-    }),
-  ).annotate({ description: "HarmonyOS PC adaptation settings" }),
   experimental: Schema.optional(
     Schema.Struct({
       disable_paste_summary: Schema.optional(Schema.Boolean),

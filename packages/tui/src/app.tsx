@@ -595,13 +595,11 @@ if (route.data.type === "plugin") {
       },
       {
         name: "ohos-pc",
-        title: "HarmonyOS PC adaptation",
+        title: "鸿蒙化开源库",
         category: "Session",
         slashName: "ohos-pc",
         run: () => {
-          dialog.replace(() => (
-            <DialogOhosPc knowledgeBaseUrl={sync.data.config.ohos_pc?.knowledge_base_url} />
-          ))
+          dialog.replace(() => <DialogOhosPc />)
         },
       },
       {

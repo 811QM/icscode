@@ -5,9 +5,6 @@ import { useRoute } from "../context/route"
 import { useLocal } from "../context/local"
 import { useProject } from "../context/project"
 import { useToast } from "../ui/toast"
-import path from "path"
-import os from "os"
-import { readText, writeText } from "../util/persistence"
 
 const LIBRARIES = [
   { title: "VisualVM", value: "VisualVM", description: "Java JVM monitoring and troubleshooting tool" },
@@ -38,39 +35,6 @@ const LIBRARIES = [
   { title: "Avidemux", value: "Avidemux", description: "Video editor" },
 ]
 
-const DOCS_DIR = path.join(os.homedir(), ".cache", "icscode", "ohos-pc-docs")
-
-const DEFAULT_PROMPT_TEMPLATE = `Use the superpowers framework to guide me through HarmonyOS PC adaptation for {{library}}.
-
-First, fetch the HarmonyOS PC adaptation knowledge base from {{knowledgeBaseUrl}} and read the SOW (Statement of Work) documents.
-Then, use superpowers brainstorming to analyze the adaptation scope and requirements for {{library}}.
-After that, use superpowers writing-plans to create a detailed adaptation plan.
-Finally, use superpowers executing-plans to implement the adaptation step by step.
-
-Ask me for confirmation at each major step before proceeding.`
-
-async function ensureDocs(): Promise<void> {
-  const templatePath = path.join(DOCS_DIR, "prompt-template.md")
-  try {
-    await readText(templatePath)
-  } catch {
-    await writeText(templatePath, DEFAULT_PROMPT_TEMPLATE).catch(() => {})
-  }
-}
-
-async function readDoc(name: string): Promise<string | undefined> {
-  try {
-    return await readText(path.join(DOCS_DIR, `${name}.md`))
-  } catch {
-    if (name === "prompt-template") return DEFAULT_PROMPT_TEMPLATE
-    return undefined
-  }
-}
-
-function interpolate(template: string, values: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] ?? `{{${key}}}`)
-}
-
 function StatusDialog(props: { title: string; message: string }) {
   return (
     <box flexDirection="column" gap={1} padding={2}>
@@ -81,55 +45,19 @@ function StatusDialog(props: { title: string; message: string }) {
   )
 }
 
-export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
+export function DialogOhosPc() {
   const dialog = useDialog()
   const sdk = useSDK()
   const route = useRoute()
   const local = useLocal()
   const project = useProject()
   const toast = useToast()
-  const url = props.knowledgeBaseUrl
 
-  if (!url) {
-    return (
-      <box flexDirection="column" gap={1} padding={2}>
-        <text fg="red">Configuration Error</text>
-        <text>
-          Missing ohos_pc.knowledge_base_url in ~/.config/icscode/icscode.json{"\n\n"}
-          Please add:{"\n"}
-          {"  \"ohos_pc\": {"}{"\n"}
-          {"    \"knowledge_base_url\": \"git@gitcode.com:YOUR_ORG/YOUR_REPO.git\""}{"\n"}
-          {"  }"}
-        </text>
-        <text fg="gray">Press Esc to close</text>
-      </box>
-    )
-  }
+  async function startAdaptation(library: string) {
+    toast.show({ message: `[ohos-pc] 鸿蒙化 ${library}`, variant: "info" })
+    dialog.replace(() => <StatusDialog title="Loading..." message={`准备鸿蒙化 ${library}...`} />)
 
-  async function startAdaptation(library: string, knowledgeBaseUrl: string) {
-    toast.show({ message: `[ohos-pc] starting ${library}`, variant: "info" })
-    dialog.replace(() => <StatusDialog title="Loading..." message={`Adapting ${library}...`} />)
     try {
-      await ensureDocs()
-      const template = await readDoc("prompt-template")
-      const sow = await readDoc("sow")
-      if (!template) {
-        dialog.replace(() => (
-          <StatusDialog
-            title="Error"
-            message={`Missing ${DOCS_DIR}/prompt-template.md and no default template available.`}
-          />
-        ))
-        return
-      }
-
-      const system = [
-        interpolate(template, { library, knowledgeBaseUrl }),
-        sow ? `\n\n## SOW\n\n${sow}` : "",
-      ].join("")
-
-      dialog.replace(() => <StatusDialog title="Loading..." message="Starting adaptation session..." />)
-
       let sessionID: string
       if (route.data.type === "session") {
         sessionID = route.data.sessionID
@@ -153,7 +81,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
             providerID: model.providerID,
             id: model.modelID,
           },
-          title: `HarmonyOS PC adaptation: ${library}`,
+          title: `鸿蒙化: ${library}`,
         })
         if (createResult.error || !createResult.data) {
           dialog.replace(() => (
@@ -170,8 +98,7 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
       dialog.replace(() => <StatusDialog title="Loading..." message="Sending prompt..." />)
       const promptResult = await sdk.client.session.promptAsync({
         sessionID,
-        system,
-        parts: [{ type: "text", text: `Please start the HarmonyOS PC adaptation for ${library}.` }],
+        parts: [{ type: "text", text: `鸿蒙化 ${library}` }],
       })
 
       if (promptResult.error) {
@@ -181,7 +108,6 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
         return
       }
 
-      dialog.replace(() => <StatusDialog title="Loading..." message="Opening session..." />)
       dialog.clear()
       route.navigate({ type: "session", sessionID })
     } catch (error) {
@@ -197,11 +123,11 @@ export function DialogOhosPc(props: { knowledgeBaseUrl?: string }) {
 
   return (
     <DialogSelect
-      title="Select HarmonyOS PC library to adapt"
-      placeholder="Type to filter libraries..."
+      title="选择要鸿蒙化的开源库"
+      placeholder="输入关键字过滤..."
       options={LIBRARIES}
       onSelect={(option) => {
-        void startAdaptation(option.value, url)
+        void startAdaptation(option.value)
       }}
     />
   )
