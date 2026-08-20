@@ -45,7 +45,7 @@ export function DialogOhosPc() {
 
   async function startAdaptation(library: string) {
     dialog.clear()
-    toast.show({ message: `[ohos-pc] 鸿蒙化 ${library}`, variant: "info" })
+    toast.show({ message: `[ohos-pc] harmonize ${library}`, variant: "info" })
 
     try {
       let sessionID: string
@@ -68,11 +68,11 @@ export function DialogOhosPc() {
             providerID: model.providerID,
             id: model.modelID,
           },
-          title: `鸿蒙化: ${library}`,
+          title: `Harmonize: ${library}`,
         })
         if (createResult.error || !createResult.data) {
           toast.show({
-            message: `创建 session 失败: ${createResult.error ? String(createResult.error) : "no response"}`,
+            message: `Failed to create session: ${createResult.error ? String(createResult.error) : "no response"}`,
             variant: "error",
           })
           return
@@ -82,11 +82,11 @@ export function DialogOhosPc() {
 
       const promptResult = await sdk.client.session.promptAsync({
         sessionID,
-        parts: [{ type: "text", text: `鸿蒙化 ${library}` }],
+        parts: [{ type: "text", text: `harmonize ${library}` }],
       })
 
       if (promptResult.error) {
-        toast.show({ message: `发送 prompt 失败: ${String(promptResult.error)}`, variant: "error" })
+        toast.show({ message: `Failed to send prompt: ${String(promptResult.error)}`, variant: "error" })
         return
       }
 
@@ -94,7 +94,7 @@ export function DialogOhosPc() {
     } catch (error) {
       console.error("[/ohos-pc] startAdaptation failed:", error)
       toast.show({
-        message: `鸿蒙化失败: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Harmonization failed: ${error instanceof Error ? error.message : String(error)}`,
         variant: "error",
       })
     }
@@ -102,8 +102,8 @@ export function DialogOhosPc() {
 
   return (
     <DialogSelect
-      title="选择要鸿蒙化的开源库"
-      placeholder="输入关键字过滤..."
+      title="Select open source library to harmonize"
+      placeholder="Type to filter..."
       options={LIBRARIES}
       onSelect={(option) => {
         void startAdaptation(option.value)

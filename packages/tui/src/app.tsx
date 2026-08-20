@@ -595,7 +595,7 @@ if (route.data.type === "plugin") {
       },
       {
         name: "ohos-pc",
-        title: "鸿蒙化开源库",
+        title: "Harmonize open source library",
         category: "Session",
         slashName: "ohos-pc",
         run: () => {
